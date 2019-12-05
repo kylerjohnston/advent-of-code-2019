@@ -6,12 +6,11 @@ class Grid
 
   def initialize
     @routes = []
-    @intersections = []
   end
 
   def add_route(step_string)
     steps = step_string.split(',')
-    route = calculate_route([0, 0], steps.reverse, [])
+    route = calculate_route([0, 0], steps.reverse, [], 0)
     @routes << route.sort_by{ |x| x['distance'] }
     if @routes.length > 1
       @intersection = find_intersections
@@ -19,7 +18,7 @@ class Grid
   end
 
   private
-  def calculate_route(start, steps, route)
+  def calculate_route(start, steps, route, count)
     x = start[0]
     y = start[1]
 
@@ -33,42 +32,52 @@ class Grid
       when "U"
         stop_point = y + next_step
         while y < stop_point
+          count += 1
           y += 1
-          route << {'x' => x, 'y' => y, 'distance' => x.abs + y.abs}
+          route << {'x' => x, 'y' => y, 'distance' => x.abs + y.abs, 'count' => count}
         end
       when "D"
         stop_point = y - next_step
         while y > stop_point
+          count += 1
           y -= 1
-          route << {'x' => x, 'y' => y, 'distance' => x.abs + y.abs}
+          route << {'x' => x, 'y' => y, 'distance' => x.abs + y.abs, 'count' => count}
         end
       when "R"
         stop_point = x + next_step
         while x < stop_point
+          count += 1
           x += 1
-          route << {'x' => x, 'y' => y, 'distance' => x.abs + y.abs}
+          route << {'x' => x, 'y' => y, 'distance' => x.abs + y.abs, 'count' => count}
         end
       when "L"
         stop_point = x - next_step
         while x > stop_point
+          count += 1
           x -= 1
-          route << {'x' => x, 'y' => y, 'distance' => x.abs + y.abs}
+          route << {'x' => x, 'y' => y, 'distance' => x.abs + y.abs, 'count' => count}
         end
       end
-      calculate_route([x, y], steps, route)
+      calculate_route([x, y], steps, route, count)
     end
   end
 
   def find_intersections
+    intersection = nil
     @routes[0].each do |x|
       @routes[1].each do |y|
-        if x['distance'] < y['distance']
-          break
-        end
-        if x['x'] == y['x'] and x['y'] == y['y']
-          return x
+        count = x['count'] + y['count']
+        if intersection != nil and count > intersection['count']
+          next
+        elsif x['x'] == y['x'] and x['y'] == y['y']
+          if intersection.nil? or count < intersection['count']
+            point = x.dup
+            point['count'] = x['count'] + y['count']
+            intersection = point
+          end
         end
       end
     end
+    return intersection
   end
 end
