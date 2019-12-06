@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 # Part 1 answer is 1431
+# Part 2 answer is 48012
 
 class Grid
   attr_reader :routes, :intersection, :distance
@@ -11,7 +12,7 @@ class Grid
   def add_route(step_string)
     steps = step_string.split(',')
     route = calculate_route([0, 0], steps.reverse, [], 0)
-    @routes << route.sort_by{ |x| x['distance'] }
+    @routes << route.sort_by{ |x| [x['count'],x['distance']] }
     if @routes.length > 1
       @intersection = find_intersections
     end
@@ -68,7 +69,7 @@ class Grid
       @routes[1].each do |y|
         count = x['count'] + y['count']
         if intersection != nil and count > intersection['count']
-          next
+          break
         elsif x['x'] == y['x'] and x['y'] == y['y']
           if intersection.nil? or count < intersection['count']
             point = x.dup
