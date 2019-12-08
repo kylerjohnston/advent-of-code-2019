@@ -1,20 +1,22 @@
-#!/usr/bin/env ruby
-# Part 1 answer is 1431
-# Part 2 answer is 48012
-
 class Grid
-  attr_reader :routes, :intersection, :distance
+  attr_reader :routes, :intersections
 
   def initialize
     @routes = []
+    @intersections = {'mh_distance' => {}, 'fewest_steps' => {}}
   end
 
   def add_route(step_string)
     steps = step_string.split(',')
     route = calculate_route([0, 0], steps.reverse, [], 0)
-    @routes << route.sort_by{ |x| [x['count'],x['distance']] }
+    @routes << route.sort_by{ |x| x['distance'] }
     if @routes.length > 1
-      @intersection = find_intersections
+      print "Calculating closest intersection by Manhattan distance... "
+      @intersections['mh_distance'] = find_mh_distance
+      puts @intersections['mh_distance']
+      print "Calculating closest intersection by fewest total steps... "
+      @intersections['fewest_steps'] = find_fewest_steps
+      puts @intersections['fewest_steps']
     end
   end
 
@@ -63,10 +65,10 @@ class Grid
     end
   end
 
-  def find_intersections
+  def find_fewest_steps
     intersection = nil
-    @routes[0].each do |x|
-      @routes[1].each do |y|
+    @routes[0].sort_by{ |x| [x['count'], x['distance']] }.each do |x|
+      @routes[1].sort_by{ |x| [x['count'], x['distance']] }.each do |y|
         count = x['count'] + y['count']
         if intersection != nil and count > intersection['count']
           break
@@ -80,5 +82,18 @@ class Grid
       end
     end
     return intersection
+  end
+
+  def find_mh_distance
+    @routes[0].each do |x|
+      @routes[1].each do |y|
+        if x['distance'] < y['distance']
+          break
+        end
+        if x['x'] == y['x'] and x['y'] == y['y']
+          return x
+        end
+      end
+    end
   end
 end
