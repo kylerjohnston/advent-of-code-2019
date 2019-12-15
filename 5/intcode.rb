@@ -16,7 +16,12 @@ class IntcodeComputer
     elsif op_expr.actions['update']
       data[op_expr.actions['update']['location']] = op_expr.actions['update']['value']
     end
-    return parse_intcode(data, pointer + op_expr.actions['next_step'])
+    if op_expr.actions['jump']
+      new_pointer = op_expr.actions['jump']
+    else
+      new_pointer = op_expr.actions['next_step'] + pointer
+    end
+    return parse_intcode(data, new_pointer)
   end
 end
 
@@ -43,6 +48,26 @@ class Op_Expr
       'method' => nil,
       'params' => 1
     },
+    '5' => {
+      'action' => 'jump',
+      'method' => true,
+      'params' => 2
+    },
+    '6' => {
+      'action' => 'jump',
+      'method' => nil,
+      'params' => 2
+    },
+    '7' => {
+      'action' => 'update',
+      'method' => '<',
+      'params' => 3
+    },
+    '8' => {
+      'action' => 'update',
+      'method' => '==',
+      'params' => 3
+    },
     '99' => {
       'action' => 'exit',
       'method' => nil,
@@ -54,6 +79,7 @@ class Op_Expr
     # We receive opcode and pmode together as one argument
     # E.g. 1002 is an opcode of 02 and parameter modes 0, 1, 0
     @opcode, @params = get_opcode_and_params(op_and_pmode, params)
+
     @intcode = intcode
     @actions = parse_expression(@opcode.dup, @params.dup)
   end
@@ -93,6 +119,7 @@ class Op_Expr
       'update' => nil,
       'exit' => nil,
       'output' => nil,
+      'jump' => nil,
       'next_step' => nil
     }
     case OPCODES[opcode.to_s]['action']
@@ -101,14 +128,38 @@ class Op_Expr
       return actions
     when 'output'
       actions['output'] = get_output(params)
+    when 'jump'
+      actions['jump'] = get_jump(opcode, params)
     when 'update'
       actions['update'] = {
         'value' => get_update_value(params, OPCODES[opcode.to_s]['method']),
         'location' => params.pop['param'] # Never pmode 1
       }
     end
+
     actions['next_step'] = @params.size + 1
     return actions
+  end
+
+  def get_jump(opcode, params)
+    case params[0]['mode']
+    when 0
+      p = @intcode[params[0]['param']]
+    when 1
+      p = params[0]['param']
+    end
+    m = OPCODES[opcode.to_s]['method']
+
+    if (p == 0 and m) or (p != 0 and not m)
+      return nil
+    else
+      case params[1]['mode']
+      when 0
+        return @intcode[params[1]['param']]
+      when 1
+        return params[1]['param']
+      end
+    end
   end
 
   def get_output(params)
@@ -141,6 +192,18 @@ class Op_Expr
       return factors.reduce(1, :*)
     when '+'
       return factors.reduce(0, :+)
+    when '<'
+      if factors[0] < factors[1]
+        return 1
+      else
+        return 0
+      end
+    when '=='
+      if factors[0] == factors[1]
+        return 1
+      else
+        return 0
+      end
     end
   end
 end
