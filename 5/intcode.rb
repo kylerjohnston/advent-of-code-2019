@@ -76,11 +76,10 @@ class Op_Expr
   }
 
   def initialize(intcode, op_and_pmode, *params)
+    @intcode = intcode
     # We receive opcode and pmode together as one argument
     # E.g. 1002 is an opcode of 02 and parameter modes 0, 1, 0
     @opcode, @params = get_opcode_and_params(op_and_pmode, params)
-
-    @intcode = intcode
     @actions = parse_expression(@opcode.dup, @params.dup)
   end
 
@@ -109,7 +108,13 @@ class Op_Expr
     end
 
     raw_params.each_with_index do |param, i|
-      params << {'param' => param, 'mode' => pmodes[i]}
+      case pmodes[i]
+      when 0
+        value = @intcode[param]
+      when 1
+        value = param
+      end
+      params << {'param' => param, 'mode' => pmodes[i], 'value' => value}
     end
     return opcode, params
   end
@@ -127,7 +132,7 @@ class Op_Expr
       actions['exit'] = 1
       return actions
     when 'output'
-      actions['output'] = get_output(params)
+      actions['output'] = params[0]['value']
     when 'jump'
       actions['jump'] = get_jump(opcode, params)
     when 'update'
@@ -142,32 +147,12 @@ class Op_Expr
   end
 
   def get_jump(opcode, params)
-    case params[0]['mode']
-    when 0
-      p = @intcode[params[0]['param']]
-    when 1
-      p = params[0]['param']
-    end
+    p = params[0]['value']
     m = OPCODES[opcode.to_s]['method']
-
     if (p == 0 and m) or (p != 0 and not m)
       return nil
     else
-      case params[1]['mode']
-      when 0
-        return @intcode[params[1]['param']]
-      when 1
-        return params[1]['param']
-      end
-    end
-  end
-
-  def get_output(params)
-    case params[0]['mode']
-    when 0
-      return @intcode[params[0]['param']]
-    when 1
-      return params[0]['param']
+      return params[1]['value']
     end
   end
 
@@ -179,12 +164,7 @@ class Op_Expr
 
     factors = []
     params[0..-2].each do |p|
-      case p['mode']
-      when 0
-        factors << @intcode[p['param']]
-      when 1
-        factors << p['param']
-      end
+      factors << p['value']
     end
 
     case method
